@@ -1,0 +1,5 @@
+{
+  "LOGFILE": "/home/koymans/Hades/log/hades.log",
+  "DATABASE_FILE": "/home/koymans/Hades/db/UUP07.db",
+  "VERSION": "0.1.1"
+}

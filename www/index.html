@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="description" content="HADES Tomographic Explorer">
+    <meta name="keywords" content="Utrecht University, HADES, Tomography, UUP07, D3.js, Javascript">
+    <meta name="author" content="Mathijs Koymans">
+
+    <!-- Include Bootstrap v4 and custom CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./css/hades.css">
+    <link rel="shortcut icon" type="image/x-icon" href="images/hades.ico"/>
+
+    <title>HADES - Underworld Explorer</title>
+
+  </head>
+
+  <body>
+
+    <!-- Header LOGO -->
+    <div style="text-align: center;">
+      <a href="https://knmi.nl"><img src="./images/knmi.png"></a>
+    </div>
+
+    <br>
+
+    <div class="body">
+
+      <!-- Top Introduction -->
+      <div class="alert alert-warning" role="alert">
+        <div style="float: right; color: grey;"><span class="badge badge-success" id="application-version"></span></div>
+        <h4 style="color: #c4463a; border-left: 6px solid #c4463a;">&nbsp;<b> HADES</b> Tomography Explorer</h4>
+        <p> &#x1F44D; Get started and explore the underworld! Select a section preset or drag the markers to view a geodesic section of the <a target="_blank" href="http://www.atlas-of-the-underworld.org/uu-p07-model/"><b>Utrecht University UUP07</b></a> tomographic model.
+      </div>
+
+      <!-- Map & Ovelays -->
+      <div class="wrapper">
+        <div id="map"></div>
+        <div id="location-information-wrapper">
+          <div id="location-information"></div>
+          <br>
+          <div id="accordion">
+            <div class="card">
+              <div class="card-header" id="headingOne" style='padding: 0px'>
+                <h5 class="mb-0">
+                <button class="btn btn-link btn-sm" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                  Options <small>(expand)</small>
+                </button>
+                </h5>
+              </div>
+              <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
+                <div class="card-body" style='text-align: left;'>
+                  <input type="checkbox" id="high-contrast"><label for="high-contrast"> &nbsp; Show high contrast image</label>
+                  <br><input type="checkbox" id="lock-degrees"><label for="lock-degrees"> &nbsp; Lock profile at <b>40</b> degrees</label>
+                  <br><input type="checkbox" id="show-plate-boundaries"><label for="show-plate-boundaries"> &nbsp; Show plate boundaries</label>
+                  <br><input type="checkbox" id="show-satellite"><label for="show-satellite"> &nbsp; Show satellite map</label>
+                  <br><input type="checkbox" id="high-resolution" disabled><label class='text-muted' for="high-resolution"> &nbsp; Use high resolution (in progress)</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="preset-information">
+          <select class="form-control" id="select-preset" title="Select a preset section">
+            <option>Banda</option>
+            <option>Scotia</option>
+            <option>Chile</option>
+            <option>Gibraltar</option>
+            <option>Hawaii</option>
+            <option>Faralon</option>
+            <option>Aegean</option>
+          </select>
+        </div>
+        <div id="progress-bar" class="progress">
+          <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%;">
+            <b>Creating Tomographic Section</b>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+
+      <ul class="nav nav-tabs nav-justified" role="tablist">
+        <li class="nav-item">
+          <a class="nav-link active" href="#cartesian" role="tab" data-toggle="tab">Cartesian View</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#polar" role="tab" data-toggle="tab">Polar View <span class="badge badge-success">New!</span></a>
+        </li>
+      </ul>
+      
+      <!-- Tab panes -->
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="cartesian">
+          <br>
+          <div id="container"></div>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="polar">
+          <br>
+          <div style="position: relative; margin: 10px; float: right;">
+            <button type="button" class="btn btn-info btn-sm" title="Download the figure as .svg." onclick="exportSVG()"><b>&#x2193; Export to .SVG</b></button>
+          </div>
+          <div id="svg-container" style="text-align: center;"></div>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Footer -->
+      <div class="footer">
+        <div style="float: left;">
+          <small>&#10149;<a href="./information.html"> Information </a> & <a href="./changelog.html">Changelog</a></small>
+        </div>
+        <div style="float: right;">
+          <small>Copyright &#xa9; 2018 Mathijs Koymans, <a href="http://www.knmi.nl">KNMI</a> &nbsp;&#x2696; Licensed under <a href="https://opensource.org/licenses/MIT">MIT</a></small>
+        </div>
+      </div>
+
+      <br>
+
+    </div>
+
+  </body>
+
+  <!-- Include HADES -->
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="./js/hades.js"></script>
+  <script src="./js/svg.js"></script>
+  <script src="./js/lib/rainbow.js"></script>
+
+  <!-- jQuery for Highcharts -->
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
+  <!-- Include Highcharts -->
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/heatmap.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <script src="https://code.highcharts.com/modules/boost.js"></script>
+
+  <!-- Include Google Maps v3 -->
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAN3tYdvQ5tSS5NIKwZX-ZqhsM4NApVV_I&callback=initMap" async defer></script>
+
+  </body>
+
+</html>
