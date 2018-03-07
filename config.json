@@ -1,5 +1,7 @@
 {
   "LOGFILE": "/home/koymans/Hades/log/hades.log",
   "DATABASE_FILE": "/home/koymans/Hades/db/UUP07.db",
-  "VERSION": "0.1.1"
+  "VERSION": "0.1.1",
+  "HOST": "136.144.177.195",
+  "PORT": 8080
 }

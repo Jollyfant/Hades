@@ -286,7 +286,7 @@ Hades.prototype.GetSurfaceIndex = function(position) {
 
 const hades = new Hades(CONFIG.DATABASE_FILE, function() {
 
-  Http.createServer(function(req, res) {
+  const webserver = Http.createServer(function(req, res) {
   	
     var url = Url.parse(req.url, true);
 
@@ -312,12 +312,16 @@ const hades = new Hades(CONFIG.DATABASE_FILE, function() {
       {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)}
     ));
 
+  
+    // Set CORS headers
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
-    res.write(response);
-    res.end();
+
+    res.end(response);
   
-  }).listen(8080, "136.144.177.195", function() {
+  });
+
+  webserver.listen(CONFIG.PORT, CONFIG.HOST, function() {
     console.log("Hades is listening.");
   });
 
