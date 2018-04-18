@@ -24,6 +24,8 @@ function initMap() {
     bool ? plateLayer.setMap(map) : plateLayer.setMap(null);
   }
 
+  $("#high-resolution").change(GetCrossSection);
+
   $("#show-satellite").change(function () {
     if($("#show-satellite").is(":checked")) {
       map.setMapTypeId("satellite");
@@ -229,7 +231,8 @@ function GetCrossSection() {
     "lam1=" + firstMarker.position.toJSON().lng,
     "phi2=" + secondMarker.position.toJSON().lat,
     "lam2=" + secondMarker.position.toJSON().lng,
-    "model=" + document.getElementById("model-type").value
+    "model=" + document.getElementById("model-type").value,
+    "resolution=" + (document.getElementById("high-resolution").checked ? "high" : "low")
   ].join("&");
 
   document.getElementById("location-information").innerHTML = FormatLocationString(firstMarker.position.toJSON(), secondMarker.position.toJSON());

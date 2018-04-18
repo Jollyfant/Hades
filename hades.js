@@ -7,8 +7,6 @@ const CONFIG = require("./config");
 // Number of 3D grid points used for indexing
 const EARTH_RADIUS = 6371;
 const MAXIMUM_DEPTH = 2815.50;
-const NUMBER_OF_POINTS = 60 * 2;
-const NUMBER_OF_DEPTHS = 60;
 
 const Logger = Filesystem.createWriteStream(CONFIG.LOGFILE, {"flags": "a"});
 
@@ -67,12 +65,27 @@ Hades.prototype.BinarySearchUpper = function(haystack, needle) {
  * Returns the cross section
  *
  */
-Hades.prototype.GetCrossSection = function(first, second, model) {
+Hades.prototype.GetCrossSection = function(first, second, model, resolution) {
+
+  var NUMBER_OF_DEPTHS,
+      NUMBER_OF_POINTS;
+ 
+  switch(resolution) {
+    case "low":
+      NUMBER_OF_DEPTHS = 60; break;
+    case "high":
+      NUMBER_OF_DEPTHS = 120; break;
+    default:
+      NUMBER_OF_DEPTHS = 60;
+     
+  }
+
+  NUMBER_OF_POINTS = 2 * NUMBER_OF_DEPTHS;
 
   var crossSection = new Array();
 
   for(var i = 0; i < NUMBER_OF_POINTS; i++) {
-    crossSection.push(this.GetProfile(this.FractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model));
+    crossSection.push(this.GetProfile(this.FractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model, NUMBER_OF_DEPTHS));
   }
 
   const arcDistance = this.Haversine(first, second);
@@ -151,7 +164,7 @@ Hades.prototype.CreateModel = function(data) {
  * for a position on the surface
  *
  */
-Hades.prototype.GetProfile = function(position, model) {
+Hades.prototype.GetProfile = function(position, model, NUMBER_OF_DEPTHS) {
 
   const START = 5;
   const DEPTH = (MAXIMUM_DEPTH - START);
@@ -304,6 +317,13 @@ const hades = new Hades(function() {
       "SP12RTS-P"
     ];
 
+    var resolution = url.query.resolution || "low";
+
+    if(["low", "high"].indexOf(resolution) === -1) {
+      res.writeHead(400);
+      return res.end();
+    }
+
     if(url.query.phi1 === undefined || url.query.phi2 === undefined || url.query.lam1 === undefined || url.query.lam2 === undefined) {
       res.writeHead(400);
       return res.end();
@@ -329,7 +349,8 @@ const hades = new Hades(function() {
     var response = JSON.stringify(hades.GetCrossSection(
       {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
       {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
-      url.query.model
+      url.query.model,
+      resolution
     ));
 
   
