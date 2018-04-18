@@ -35,6 +35,8 @@ HadesArced.prototype.CreateSVGContainer = function() {
 
   return d3.select("#svg-container")
     .append("svg")
+    .attr("xmlns", "http://www.w3.org/2000/svg")
+    .attr("xmlns:xlink", "http://www.w3.org/1999/xlink")
     .attr("width", 700)
     .attr("height", height)
     .append("g")
@@ -168,7 +170,7 @@ HadesArced.prototype.DrawBoundary = function(depth) {
     .attr("font-weight", "bold")
     .attr("font-size", "8")
     .attr("fill", "white")
-    .attr("xlink:href", "#arc" + depth)
+    .attr("href", "#arc" + depth)
     .text(depth);
 
 }
