@@ -24,8 +24,6 @@ function initMap() {
     bool ? plateLayer.setMap(map) : plateLayer.setMap(null);
   }
 
-  $("#high-resolution").change(GetCrossSection);
-
   $("#show-satellite").change(function () {
     if($("#show-satellite").is(":checked")) {
       map.setMapTypeId("satellite");
@@ -90,6 +88,8 @@ function initMap() {
   // When the preset select menu is changed
   document.getElementById("select-preset").addEventListener("change", selectEvent);
   document.getElementById("lock-degrees").addEventListener("change", GetCrossSection);
+  document.getElementById("high-resolution").addEventListener("change", GetCrossSection);
+  document.getElementById("high-contrast").addEventListener("change", GetCrossSection);
   document.getElementById("model-type").addEventListener("change", GetCrossSection);
 
   function selectEvent() {
