@@ -3,7 +3,7 @@ var map,
     polyLine;
 
 const APPLICATION_VERSION = "Alpha 0.1.1";
-const HADES_SERVER = "136.144.177.195:8080";
+const HADES_SERVER = "127.0.0.1:8080";
 const TRANSPARENCY = 1.0;
 const EARTH_RADIUS = 6371.0;
 const CORE_RADIUS = 3556.0;
@@ -88,6 +88,7 @@ function initMap() {
   // When the preset select menu is changed
   document.getElementById("select-preset").addEventListener("change", selectEvent);
   document.getElementById("lock-degrees").addEventListener("change", GetCrossSection);
+  document.getElementById("model-type").addEventListener("change", GetCrossSection);
 
   function selectEvent() {
     switch(document.getElementById("select-preset").value) {
@@ -227,7 +228,8 @@ function GetCrossSection() {
     "phi1=" + firstMarker.position.toJSON().lat,
     "lam1=" + firstMarker.position.toJSON().lng,
     "phi2=" + secondMarker.position.toJSON().lat,
-    "lam2=" + secondMarker.position.toJSON().lng
+    "lam2=" + secondMarker.position.toJSON().lng,
+    "model=" + document.getElementById("model-type").value
   ].join("&");
 
   document.getElementById("location-information").innerHTML = FormatLocationString(firstMarker.position.toJSON(), secondMarker.position.toJSON());

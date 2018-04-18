@@ -52,7 +52,12 @@
               </div>
               <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordion">
                 <div class="card-body" style='text-align: left;'>
-                  <input type="checkbox" id="high-contrast"><label for="high-contrast"> &nbsp; Show high contrast image</label>
+                  <select class="form-control form-control-sm" id="model-type" title="Select a model">
+                    <option>UUP07</option>
+                    <option>SP12RTS-S</option>
+                    <option>SP12RTS-P</option>
+                  </select>
+                  <br><input type="checkbox" id="high-contrast"><label for="high-contrast"> &nbsp; Show high contrast image</label>
                   <br><input type="checkbox" id="lock-degrees"><label for="lock-degrees"> &nbsp; Lock profile at <b>40</b> degrees</label>
                   <br><input type="checkbox" id="show-plate-boundaries"><label for="show-plate-boundaries"> &nbsp; Show plate boundaries</label>
                   <br><input type="checkbox" id="show-satellite"><label for="show-satellite"> &nbsp; Show satellite map</label>
@@ -63,7 +68,7 @@
           </div>
         </div>
         <div id="preset-information">
-          <select class="form-control" id="select-preset" title="Select a preset section">
+          <select class="form-control form-control-sm" id="select-preset" title="Select a preset section">
             <option>Banda</option>
             <option>Scotia</option>
             <option>Chile</option>

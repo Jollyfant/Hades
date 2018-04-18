@@ -12,23 +12,24 @@ const NUMBER_OF_DEPTHS = 60;
 
 const Logger = Filesystem.createWriteStream(CONFIG.LOGFILE, {"flags": "a"});
 
-var Hades = function(db, callback) {
+var Hades = function(callback) {
  
   // Save evocation context
   var self = this;
 
-  Filesystem.readFile(db, function(error, data) {
+  self.MODEL = new Object();
 
-    // Fatal error reading the database
-    if(error) {
-      throw("Could not read database file " + db +  " from disk.");
-    }
+  
+  CONFIG.DATABASE_FILES.forEach(function(db) {
 
-    self.MODEL = JSON.parse(data.toString());
+    data = Filesystem.readFileSync(db);
 
-    callback();
+    var data = JSON.parse(data.toString());
+    self.MODEL[data.model] = data;
 
   });
+
+  callback();
 
 }
 
@@ -66,12 +67,12 @@ Hades.prototype.BinarySearchUpper = function(haystack, needle) {
  * Returns the cross section
  *
  */
-Hades.prototype.GetCrossSection = function(first, second) {
+Hades.prototype.GetCrossSection = function(first, second, model) {
 
   var crossSection = new Array();
 
   for(var i = 0; i < NUMBER_OF_POINTS; i++) {
-    crossSection.push(this.GetProfile(this.FractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1))));
+    crossSection.push(this.GetProfile(this.FractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model));
   }
 
   const arcDistance = this.Haversine(first, second);
@@ -150,16 +151,17 @@ Hades.prototype.CreateModel = function(data) {
  * for a position on the surface
  *
  */
-Hades.prototype.GetProfile = function(position) {
+Hades.prototype.GetProfile = function(position, model) {
 
   const START = 5;
   const DEPTH = (MAXIMUM_DEPTH - START);
 
   // Set up an empty profile
   var profile = new Array();
+  var model = this.GetModel(model);
 
   // Get the surface index
-  var surfaceIndex = this.GetSurfaceIndex(position);
+  var surfaceIndex = this.GetSurfaceIndex(position, model);
 
   // Go over all the depths
   for(var i = 0; i < NUMBER_OF_DEPTHS; i++) {
@@ -170,7 +172,7 @@ Hades.prototype.GetProfile = function(position) {
     // Add each depth to the profile
     profile.push({
       "depth": iDepth,
-      "delta": this.Interpolate(surfaceIndex, iDepth, position)
+      "delta": this.Interpolate(surfaceIndex, iDepth, position, model)
     });
 
   }
@@ -186,14 +188,14 @@ function linear(x1, x2, f) {
   return x1 + f * (x2 - x1);
 }
 
-Hades.prototype.Interpolate = function(surfaceIndex, depth, position) {
+Hades.prototype.Interpolate = function(surfaceIndex, depth, position, model) {
 
   // Determine the depth belonging to a given depth
-  var depthIndex = this.GetDepthIndex(depth);
+  var depthIndex = this.GetDepthIndex(depth, model);
 
   // Get the top and bottom nodes above this depth
-  var topNodes = this.GetNearestNodes(surfaceIndex, depthIndex - 1);
-  var bottomNodes = this.GetNearestNodes(surfaceIndex, depthIndex);
+  var topNodes = this.GetNearestNodes(surfaceIndex, depthIndex - 1, model);
+  var bottomNodes = this.GetNearestNodes(surfaceIndex, depthIndex, model);
 
   // Do a simple bilinear interpolation on a 2D plane
   // Note: the interpolation should not be done linearly but 
@@ -206,17 +208,17 @@ Hades.prototype.Interpolate = function(surfaceIndex, depth, position) {
 
 }
 
-Hades.prototype.GetNearestNodes = function(index, depth) {
+Hades.prototype.GetNearestNodes = function(index, depth, model) {
 
   // Index of the previous node (CONSIDER WRAP AROUND!)
-  var iMin = (index.i === 0 ? this.MODEL.longitudes.length : index.i) - 1;
-  var jMin = (index.j === 0 ? this.MODEL.latitudes.length : index.j) - 1;
+  var iMin = (index.i === 0 ? model.longitudes.length : index.i) - 1;
+  var jMin = (index.j === 0 ? model.latitudes.length : index.j) - 1;
 
   return [
-    this.GetModel(index.i, index.j, depth),
-    this.GetModel(iMin, index.j, depth),
-    this.GetModel(index.i, jMin, depth),
-    this.GetModel(iMin, jMin, depth)
+    this.GetModelValue(index.i, index.j, depth, model),
+    this.GetModelValue(iMin, index.j, depth, model),
+    this.GetModelValue(index.i, jMin, depth, model),
+    this.GetModelValue(iMin, jMin, depth, model)
   ];
 
 }
@@ -241,26 +243,32 @@ function bilinear(nodes, position) {
 /* Hades.prototype.GetDeltaIndex
  * Returns the index of delta value at a given node
  */
-Hades.prototype.GetDeltaIndex = function(i, j, k) {
-  return i + (j * this.MODEL.longitudes.length) + (k * this.MODEL.longitudes.length * this.MODEL.latitudes.length);
+Hades.prototype.GetDeltaIndex = function(i, j, k, model) {
+  return i + (j * model.longitudes.length) + (k * model.longitudes.length * model.latitudes.length);
 }
 
-Hades.prototype.GetModel = function(i, j, k) {
+Hades.prototype.GetModelValue = function(i, j, k, model) {
 
-  var deltaIndex = this.GetDeltaIndex(i, j, k);
+  var deltaIndex = this.GetDeltaIndex(i, j, k, model);
 
   return {
-    "lng": this.MODEL.longitudes[i],
-    "lat": this.MODEL.latitudes[j],
-    "depth": this.MODEL.depths[k],
-    "delta": this.MODEL.delta[deltaIndex]
+    "lng": model.longitudes[i],
+    "lat": model.latitudes[j],
+    "depth": model.depths[k],
+    "delta": model.delta[deltaIndex]
   }
 
 }
 
-Hades.prototype.GetDepthIndex = function(depth) {
+Hades.prototype.GetModel = function(model) {
 
-  return this.BinarySearchUpper(this.MODEL.depths, depth) || (this.MODEL.depths.length - 1);
+  return this.MODEL[model];
+
+}
+
+Hades.prototype.GetDepthIndex = function(depth, model) {
+
+  return this.BinarySearchUpper(model.depths, depth) || (model.depths.length - 1);
 
 }
 
@@ -271,26 +279,37 @@ Hades.prototype.GetDepthIndex = function(depth) {
  * the cross section 
  *
  */
-Hades.prototype.GetSurfaceIndex = function(position) {
+Hades.prototype.GetSurfaceIndex = function(position, model) {
 
   // Get indices through binary search
-  var i = this.BinarySearchUpper(this.MODEL.longitudes, position.lng);
-  var j = this.BinarySearchUpper(this.MODEL.latitudes, position.lat);
+  var i = this.BinarySearchUpper(model.longitudes, position.lng);
+  var j = this.BinarySearchUpper(model.latitudes, position.lat);
 
   return {
-    "i": (i % this.MODEL.longitudes.length),
-    "j": (j % this.MODEL.latitudes.length)
+    "i": (i % model.longitudes.length),
+    "j": (j % model.latitudes.length)
   }
 
 }
 
-const hades = new Hades(CONFIG.DATABASE_FILE, function() {
+const hades = new Hades(function() {
 
   const webserver = Http.createServer(function(req, res) {
   	
     var url = Url.parse(req.url, true);
 
+    const allowedModels = [
+      "UUP07",
+      "SP12RTS-S",
+      "SP12RTS-P"
+    ];
+
     if(url.query.phi1 === undefined || url.query.phi2 === undefined || url.query.lam1 === undefined || url.query.lam2 === undefined) {
+      res.writeHead(400);
+      return res.end();
+    }
+
+    if(allowedModels.indexOf(url.query.model) === -1) {
       res.writeHead(400);
       return res.end();
     }
@@ -309,7 +328,8 @@ const hades = new Hades(CONFIG.DATABASE_FILE, function() {
     
     var response = JSON.stringify(hades.GetCrossSection(
       {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
-      {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)}
+      {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
+      url.query.model
     ));
 
   
