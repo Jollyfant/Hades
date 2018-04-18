@@ -2,8 +2,8 @@ var map,
     degreeCircle,
     polyLine;
 
-const APPLICATION_VERSION = "Alpha 0.1.1";
-const HADES_SERVER = "127.0.0.1:8080";
+const APPLICATION_VERSION = "Alpha 0.2.0";
+const HADES_SERVER = "136.144.177.195:8080";
 const TRANSPARENCY = 1.0;
 const EARTH_RADIUS = 6371.0;
 const CORE_RADIUS = 3556.0;
@@ -360,7 +360,7 @@ function DrawCrossSection(json) {
       ]
     },
     "credits": {
-      "text": "HADES Tomography Explorer (UUP07)"
+      "text": "HADES Tomography Explorer (" + document.getElementById("model-type").value + ")"
     },
     "tooltip": {
       "formatter": function() {
@@ -372,7 +372,7 @@ function DrawCrossSection(json) {
       }
     },
     "series": [{
-      "name": "UUP07 Tomographic Model",
+      "name": document.getElementById("model-type").value + " Tomographic Model",
         "data": heatmapData,
         "borderWidth": 0.1,
         "nullColor": '#EFEFEF',

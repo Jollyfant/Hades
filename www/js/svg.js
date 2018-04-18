@@ -280,7 +280,7 @@ HadesArced.prototype.CreateColorBar = function() {
     .attr("font-family", "sans serif")
     .attr("font-weight", "bold")
     .attr("font-size", "10")
-    .attr("text-anchor", "middle").text("HADES Tomography Explorer (UUP07)")
+    .attr("text-anchor", "middle").text("HADES Tomography Explorer (" + document.getElementById("model-type").value + ")")
 
 }
 

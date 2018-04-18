@@ -341,7 +341,7 @@ const hades = new Hades(function() {
       "client": req.connection.remoteAddress,
       "time": Date.now() - start,
       "url": url.query,
-      "model": "UUP07",
+      "model": url.query.model,
       "version": CONFIG.VERSION,
       "timestamp": new Date().toISOString()
     }) + "\n");

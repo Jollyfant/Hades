@@ -1,11 +1,11 @@
 {
-  "LOGFILE": "./log/hades.log",
+  "LOGFILE": "/home/koymans/Hades-new/log/hades.log",
   "DATABASE_FILES": [
-    "./db/UUP07.db",
-    "./db/SP12RTS-S.db",
-    "./db/SP12RTS-P.db"
+    "/home/koymans/Hades-new/db/UUP07.db",
+    "/home/koymans/Hades-new/db/SP12RTS-S.db",
+    "/home/koymans/Hades-new/db/SP12RTS-P.db"
   ],
   "VERSION": "0.2.0",
-  "HOST": "127.0.0.1",
+  "HOST": "136.144.177.195",
   "PORT": 8080
 }
