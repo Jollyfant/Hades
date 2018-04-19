@@ -1,4 +1,5 @@
 const Filesystem = require("fs");
+const path = require("path");
 const Http = require("http");
 const Url = require("url");
 
@@ -17,10 +18,11 @@ var Hades = function(callback) {
 
   self.MODEL = new Object();
 
-  
-  CONFIG.DATABASE_FILES.forEach(function(db) {
+  Filesystem.readdirSync(CONFIG.DATABASE_DIRECTORY).forEach(function(db) {
 
-    data = Filesystem.readFileSync(db);
+    console.log("Reading model " + db);
+
+    data = Filesystem.readFileSync(path.join(CONFIG.DATABASE_DIRECTORY, db));
 
     var data = JSON.parse(data.toString());
     self.MODEL[data.model] = data;
@@ -363,7 +365,8 @@ const hades = new Hades(function() {
   });
 
   webserver.listen(CONFIG.PORT, CONFIG.HOST, function() {
-    console.log("Hades is listening.");
+    var heapUsed = Math.round(process.memoryUsage().heapUsed / (Math.pow(1024, 2)));
+    console.log("Hades is listening. Memory usage: " + heapUsed + " MB.");
   });
 
 });
