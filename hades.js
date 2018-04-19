@@ -315,6 +315,7 @@ const hades = new Hades(function() {
 
     const allowedModels = [
       "UUP07",
+      "MITP08",
       "SP12RTS-S",
       "SP12RTS-P"
     ];
