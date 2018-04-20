@@ -1,10 +1,10 @@
-# Hades
+# HADES - Heterogeneous Anomalies in Deep Earth Structures 
 
 <p align="center">
   <img src="./hades-explorer.svg">
 </p>
 
-Alpha 0.2.0 live tomographic explorer based on various tomographic models. The HADES server and client are provided. The database files containing the models are not included in this repository.
+Source code for the HADES Alpha 0.2.0 tomographic explorer based on various tomographic models. The HADES server and client (www) are provided. The database files that contain the tomographic models are **not** included in this repository. A demo of this application can be found on the [Atlas of the Underworld](http://www.atlas-of-the-underworld.org/hades-underworld-explorer/).
 
 # Models
 
