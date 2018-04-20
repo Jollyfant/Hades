@@ -20,3 +20,19 @@ Models must be put in the `./db` directory. Each model is a JSON object; the del
       "model": "model-name",
       "delta": [δ0 ... δN]
     }
+
+# API
+
+HADES is interfaced by a public HTTP API that can be used directly. The server must be queried with the following **required** parameters:
+
+* `phi1` - Latitude of first marker
+* `phi2` - Latitude of second marker
+* `lam1` - Longitude of first maker
+* `lam2` - Longitude of second marker
+* `model` - Model identifier (e.g. UUP07)
+
+An example query to the server:
+
+    http://136.144.177.195:8080?phi1=10&phi2=20&lam1=10&lam2=20&model=UUP07
+
+The response is a JSON object with the cross section information.
