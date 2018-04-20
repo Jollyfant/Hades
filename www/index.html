@@ -32,7 +32,7 @@
       <div class="alert alert-warning" role="alert">
         <div style="float: right; color: grey;"><span class="badge badge-success" id="application-version"></span></div>
         <h4 style="color: #c4463a; border-left: 6px solid #c4463a;">&nbsp;<b> HADES</b> Tomography Explorer</h4>
-        <p> &#x1F44D; Get started and explore the underworld! Select a section preset or drag the markers to view a geodesic section of any supported tomographic model. Click options for more.
+        <p> &#x1F44D; Get started and explore the underworld! Select a section preset or drag the markers to view a geodesic section of any supported global tomographic model. Click settings for more information.
       </div>
 
       <!-- Map & Ovelays -->
@@ -46,7 +46,7 @@
               <div class="card-header" id="headingOne" style='padding: 0px'>
                 <h5 class="mb-0">
                 <button class="btn btn-link btn-sm" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                  Options <small>(expand)</small>
+                  Settings <small>(expand)</small>
                 </button>
                 </h5>
               </div>
@@ -126,6 +126,23 @@
 
       <br>
 
+    </div>
+
+    <!-- Modal for update notification -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><span id="exampleModalLabel" class="badge badge-success">Alpha 0.2.0</span></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            A new version of HADES has been released. This release includes alternative tomographic models. Expand the settings menu on the right-hand side of the map to select another model. 
+          </div>
+        </div>
+      </div>
     </div>
 
   </body>

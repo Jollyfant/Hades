@@ -1,7 +1,7 @@
 {
-  "LOGFILE": "./log/hades.log",
-  "DATABASE_DIRECTORY": "./db",
+  "LOGFILE": "/home/koymans/Hades-new/log/hades.log",
+  "DATABASE_DIRECTORY": "/home/koymans/Hades-new/db",
   "VERSION": "0.2.0",
-  "HOST": "127.0.0.1",
+  "HOST": "136.144.177.195",
   "PORT": 8080
 }

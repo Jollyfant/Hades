@@ -3,8 +3,7 @@ var map,
     polyLine;
 
 const APPLICATION_VERSION = "Alpha 0.2.0";
-//const HADES_SERVER = "136.144.177.195:8080";
-const HADES_SERVER = "127.0.0.1:8080";
+const HADES_SERVER = "136.144.177.195:8080";
 const TRANSPARENCY = 1.0;
 const EARTH_RADIUS = 6371.0;
 const CORE_RADIUS = 3556.0;
@@ -12,10 +11,35 @@ const MANTLE_RADIUS = (EARTH_RADIUS - CORE_RADIUS);
 const COLORBAR = ["#C4463A", "#FFA500", "#FFFBBC", "#7FFFD4", "#3060CF"];
 
 document.getElementById("application-version").innerHTML = APPLICATION_VERSION;
+document.getElementById("exampleModalLabel").innerHTML = APPLICATION_VERSION;
+
+function createMarker(label) {
+
+  return {
+    "map": map,
+    "label": {
+      "text": label,
+      "fontSize": "12px",
+      "fontWeight": "bold",
+      "fontFamily": "helvetica",
+      "color": "white"
+    },
+    "draggable": true
+  }
+
+}
 
 function initMap() {
 
- plateLayer = new google.maps.KmlLayer({
+  // Update local storage with current version
+  if(window.localStorage) {
+    if(localStorage.getItem("__version__") !== APPLICATION_VERSION) {
+      $('#exampleModal').modal();
+    }
+    localStorage.setItem("__version__", APPLICATION_VERSION);
+  }
+
+  plateLayer = new google.maps.KmlLayer({
     url: "http://www.orfeus-eu.org/extra/tectonic_plates.kml",
     suppressInfoWindows: true,
     preserveViewport: true,
@@ -44,29 +68,8 @@ function initMap() {
     "disableDefaultUI": true
   });
 
-  firstMarker = new google.maps.Marker({
-    "map": map,
-    "label": {
-      "text": "L",
-      "fontSize": "12px",
-      "fontWeight": "bold",
-      "fontFamily": "helvetica",
-      "color": "white"
-    },
-    "draggable": true
-  });
-
-  secondMarker = new google.maps.Marker({
-    "map": map,
-    "label": {
-      "text": "R",
-      "fontSize": "12px",
-      "fontWeight": "bold",
-      "fontFamily": "helvetica",
-      "color": "white"
-    },
-    "draggable": true
-  });
+  firstMarker = new google.maps.Marker(createMarker("L"));
+  secondMarker = new google.maps.Marker(createMarker("R"));
 
   degreeCircle = new google.maps.Circle({
     "map": map,
@@ -78,13 +81,9 @@ function initMap() {
 
   degreeCircle.bindTo("center", firstMarker, "position");
 
-  google.maps.event.addListener(firstMarker, "dragend", function() {
-    GetCrossSection();
-  });
-
-  google.maps.event.addListener(secondMarker, "dragend", function() { 
-    GetCrossSection();
-  }); 
+  // Add listeners to the markers
+  google.maps.event.addListener(firstMarker, "dragend", GetCrossSection);
+  google.maps.event.addListener(secondMarker, "dragend", GetCrossSection); 
 
   // When the preset select menu is changed
   document.getElementById("select-preset").addEventListener("change", selectEvent);
@@ -113,8 +112,13 @@ function initMap() {
   }
 
   // Function to set markers to location
-  function setPreset(first, second) {
-  
+  function setPreset(first, second, model) {
+
+    // Preset for a certain model
+    if(model !== undefined) {
+      document.getElementById("model-type").value = model;
+    }
+
     firstMarker.setPosition(first);
     secondMarker.setPosition(second);
   
