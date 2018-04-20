@@ -1,4 +1,7 @@
 const SCALED_RADIUS = 300.0;
+const COLORBAR = ["#C4463A", "#FFA500", "#FFFBBC", "#7FFFD4", "#3060CF"];
+const CORE_RADIUS = 3556.0;
+const MANTLE_RADIUS = (EARTH_RADIUS - CORE_RADIUS);
 
 Number.prototype.Clamp = function(min, max) {
   return Math.max(Math.min(this, max), min);
@@ -59,7 +62,11 @@ HadesArced.prototype.getVelocityColor = function(delta) {
 }
 
 HadesArced.prototype.getRGBAString = function(integer) { 
+
+  const TRANSPARENCY = 1.0;
+
   return "rgba(" + ((integer >> 16) & 255) + "," + ((integer >> 8) & 255) + "," + (integer & 255) + "," + TRANSPARENCY + ")";
+
 }
 
 function exportSVG() {

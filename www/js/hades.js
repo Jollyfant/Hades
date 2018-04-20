@@ -2,13 +2,11 @@ var map,
     degreeCircle,
     polyLine;
 
+// Configuration
 const APPLICATION_VERSION = "Alpha 0.2.0";
 const HADES_SERVER = "136.144.177.195:8080";
-const TRANSPARENCY = 1.0;
+
 const EARTH_RADIUS = 6371.0;
-const CORE_RADIUS = 3556.0;
-const MANTLE_RADIUS = (EARTH_RADIUS - CORE_RADIUS);
-const COLORBAR = ["#C4463A", "#FFA500", "#FFFBBC", "#7FFFD4", "#3060CF"];
 
 document.getElementById("application-version").innerHTML = APPLICATION_VERSION;
 document.getElementById("exampleModalLabel").innerHTML = APPLICATION_VERSION;
@@ -242,6 +240,7 @@ function GetCrossSection() {
 
   document.getElementById("location-information").innerHTML = FormatLocationString(firstMarker.position.toJSON(), secondMarker.position.toJSON());
   document.getElementById("progress-bar").style.visibility = "visible";
+  document.getElementById("progress-bar-text").innerHTML = getLoadMessage(); 
 
   $.ajax({
     "url": "http://" + HADES_SERVER + "/" + queryString,
@@ -255,6 +254,10 @@ function GetCrossSection() {
     }
   });
 
+}
+
+function getLoadMessage() {
+  return Math.random() < 0.05 ? "<b>Evicting any remaining mantle goblins.</b>" : "<b>Creating tomographic section.</b>";
 }
 
 function FormatLocationString(first, second) {
