@@ -1,5 +1,4 @@
 db
 config.json
-rewrite.js
 log
-www/globe
+.DS_STORE

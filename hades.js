@@ -1,45 +1,116 @@
-const Filesystem = require("fs");
-const path = require("path");
-const Http = require("http");
-const Url = require("url");
+const fs = require("fs");
+const { join } = require("path");
+const { createServer } = require("http");
+const { parse } = require("url");
 
+// Load the configuration
 const CONFIG = require("./config");
-
-// Number of 3D grid points used for indexing
-const EARTH_RADIUS = 6371;
 const MAXIMUM_DEPTH = 2815.50;
 
-const Logger = Filesystem.createWriteStream(CONFIG.LOGFILE, {"flags": "a"});
-
-var Hades = function(callback) {
+const HadesServer = function(callback) {
  
-  // Save evocation context
-  var self = this;
+  /*
+   * Class HadesServer
+   * Wrapper for a hades server
+   */
 
-  self.MODEL = new Object();
+  this.logger = fs.createWriteStream(CONFIG.LOGFILE, {"flags": "a"});
 
-  Filesystem.readdirSync(CONFIG.DATABASE_DIRECTORY).forEach(function(db) {
+  // Save all models
+  this.models = new Object();
 
-    console.log("Reading model " + db);
+  // Read the models
+  fs.readdirSync(CONFIG.DATABASE_DIRECTORY).forEach(this.readModel, this);
 
-    data = Filesystem.readFileSync(path.join(CONFIG.DATABASE_DIRECTORY, db));
-
-    var data = JSON.parse(data.toString());
-    self.MODEL[data.model] = data;
-
-  });
-
-  callback();
+  // Create the webserver handler
+  this.webserver = createServer(this.requestHandler.bind(this));
+  this.webserver.listen(CONFIG.PORT, CONFIG.HOST, callback);
 
 }
 
-/* FUNC Hades.BinarySearchUpper
- *
- * Complete a binary search in a sorted array and return
- * the closest index (ROUNDED UP)
- *
- */
-Hades.prototype.BinarySearchUpper = function(haystack, needle) {
+HadesServer.prototype.requestHandler = function(request, response) {
+
+  /*
+   * Function HadesServer::requestHandler
+   * Handles incoming HTTP requests
+   */
+
+  const url = parse(request.url, true);
+
+  // Default resolution is low
+  const resolution = url.query.resolution || "low";
+
+  // Requested resolution is not supported
+  if(resolution !== "low" && resolution !== "high") {
+    response.writeHead(400);
+    return response.end();
+  }
+
+  // Location of the markers are missing
+  if(url.query.phi1 === undefined || url.query.phi2 === undefined || url.query.lam1 === undefined || url.query.lam2 === undefined) {
+    response.writeHead(400);
+    return response.end();
+  }
+
+  // The requested model is not available
+  if(!this.models.hasOwnProperty(url.query.model)) {
+    response.writeHead(400);
+    return response.end();
+  }
+
+  const start = Date.now()
+
+  this.logger.write(JSON.stringify({
+    "message": "HTTP Request",
+    "client": request.connection.remoteAddress,
+    "time": Date.now() - start,
+    "url": url.query,
+    "model": url.query.model,
+    "version": CONFIG.VERSION,
+    "timestamp": new Date().toISOString()
+  }) + "\n");
+
+  var payload = JSON.stringify(this.getCrossSection(
+    {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
+    {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
+    url.query.model,
+    resolution
+  ));
+
+
+  // Allow CORS headers
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
+
+  response.end(payload);
+ 
+}
+
+HadesServer.prototype.readModel = function(filename) {
+
+  /*
+   * Function HadesServer::readModel
+   * Reads a particular model from disk and saves to available model object
+   */
+
+  // Skip anything that does not end with the .db extension
+  if(!filename.endsWith(".db")) {
+    return;
+  }
+
+  console.log("Reading tomographic model: " + filename);
+
+  // Save particular model
+  this.models[filename.slice(0, -3)] = JSON.parse(fs.readFileSync(join(CONFIG.DATABASE_DIRECTORY, filename)).toString());
+
+}
+
+HadesServer.prototype.binarySearchUpper = function(haystack, needle) {
+
+  /*
+   * Function Hades::binarySearchUpper
+   * Complete a binary search in a sorted array and return the closest index
+   */
 
   var minIndex = 0;
   var maxIndex = haystack.length - 1;
@@ -62,35 +133,35 @@ Hades.prototype.BinarySearchUpper = function(haystack, needle) {
 
 }
 
-/* FUNC GetCrossSection
- *
- * Returns the cross section
- *
- */
-Hades.prototype.GetCrossSection = function(first, second, model, resolution) {
+HadesServer.prototype.getCrossSection = function(first, second, model, resolution) {
+
+  /* 
+   * Function Hades::getCrossSection
+   * Returns the cross section
+   */
 
   var NUMBER_OF_DEPTHS,
       NUMBER_OF_POINTS;
  
+  const arcDistance = this.haversine(first, second);
+
+  // Determine number of points based on the resolution
   switch(resolution) {
     case "low":
-      NUMBER_OF_DEPTHS = 60; break;
-    case "high":
-      NUMBER_OF_DEPTHS = 120; break;
-    default:
       NUMBER_OF_DEPTHS = 60;
-     
+      NUMBER_OF_POINTS = Math.ceil(arcDistance.toDegrees());
+      break;
+    case "high":
+      NUMBER_OF_DEPTHS = 120;
+      NUMBER_OF_POINTS = Math.ceil(2 * arcDistance.toDegrees());
+      break;
   }
-
-  NUMBER_OF_POINTS = 2 * NUMBER_OF_DEPTHS;
 
   var crossSection = new Array();
 
   for(var i = 0; i < NUMBER_OF_POINTS; i++) {
-    crossSection.push(this.GetProfile(this.FractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model, NUMBER_OF_DEPTHS));
+    crossSection.push(this.getProfile(this.fractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model, NUMBER_OF_DEPTHS));
   }
-
-  const arcDistance = this.Haversine(first, second);
 
   return {
     "distance": arcDistance,
@@ -101,26 +172,18 @@ Hades.prototype.GetCrossSection = function(first, second, model, resolution) {
 
 }
 
-Number.prototype.Degrees = function() {
-  return (this * 180) / Math.PI;
-}
+HadesServer.prototype.haversine = function(first, second) {
 
-Number.prototype.Radians = function() {
-  return (this * Math.PI) / 180;
-}
+  /*
+   * Function HadesServer::haversine
+   * Returns the great circle distance in degrees between two points
+   */
 
-/* FUNC Hades.Haversine
- *
- * Returns the great circle distance in degrees between two points
- *
- */
-Hades.prototype.Haversine = function(first, second) {
+  var phi1 = first.lat.toRadians();
+  var phi2 = second.lat.toRadians();
 
-  var phi1 = first.lat.Radians();
-  var phi2 = second.lat.Radians();
-
-  var delPhi = (second.lat - first.lat).Radians();
-  var delLam = (second.lng - first.lng).Radians();
+  var delPhi = (second.lat - first.lat).toRadians();
+  var delLam = (second.lng - first.lng).toRadians();
 
   var a = Math.pow(Math.sin(0.5 * delPhi), 2) + Math.cos(phi1) * Math.cos(phi2) * Math.pow(Math.sin(0.5 * delLam), 2);
 
@@ -128,66 +191,58 @@ Hades.prototype.Haversine = function(first, second) {
 
 }
 
-/* FUNC Hades.FractionalHaversine
- *
- * Returns position of fractional distance on a great circle between two points
- *
- */
-Hades.prototype.FractionalHaversine = function(first, second, fraction) {
+HadesServer.prototype.fractionalHaversine = function(first, second, fraction) {
 
-  var delta = this.Haversine(first, second);
+  /*
+   * Function HadesServer::fractionalHaversine
+   * Returns position of fractional distance on a great circle between two points
+   */
+
+  var delta = this.haversine(first, second);
 
   var a = Math.sin((1 - fraction) * delta) / Math.sin(delta);
   var b = Math.sin(fraction * delta) / Math.sin(delta);
 
-  var x = a * Math.cos(first.lat.Radians()) * Math.cos(first.lng.Radians()) + b * Math.cos(second.lat.Radians()) * Math.cos(second.lng.Radians());
-  var y = a * Math.cos(first.lat.Radians()) * Math.sin(first.lng.Radians()) + b * Math.cos(second.lat.Radians()) * Math.sin(second.lng.Radians());
-  var z = a * Math.sin(first.lat.Radians()) + b * Math.sin(second.lat.Radians());
+  var x = a * Math.cos(first.lat.toRadians()) * Math.cos(first.lng.toRadians()) + b * Math.cos(second.lat.toRadians()) * Math.cos(second.lng.toRadians());
+  var y = a * Math.cos(first.lat.toRadians()) * Math.sin(first.lng.toRadians()) + b * Math.cos(second.lat.toRadians()) * Math.sin(second.lng.toRadians());
+  var z = a * Math.sin(first.lat.toRadians()) + b * Math.sin(second.lat.toRadians());
 
   return {
-    "lat": Math.atan2(z, Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))).Degrees(),
-    "lng": Math.atan2(y, x).Degrees()
+    "lat": Math.atan2(z, Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))).toDegrees(),
+    "lng": Math.atan2(y, x).toDegrees()
   }
 
 }
 
-/* Hades.prototype.CreateModel
- * Creates the data model from a data buffer
- */
-Hades.prototype.CreateModel = function(data) {
+HadesServer.prototype.getProfile = function(position, model, NUMBER_OF_DEPTHS) {
 
-  return JSON.parse(data.toString())
-
-}
-
-/* Hades.prototype.CalculateProfile
- *
- * Returns the tomographical depth profile
- * for a position on the surface
- *
- */
-Hades.prototype.GetProfile = function(position, model, NUMBER_OF_DEPTHS) {
-
-  const START = 5;
-  const DEPTH = (MAXIMUM_DEPTH - START);
+  /*
+   * Function Hades::getProfile
+   * Returns the tomographical depth profile for a position on the surface
+   */
 
   // Set up an empty profile
+  var model = this.getModel(model);
+
+  // Determine the start and end depth of the model
+  var startDepth = model.depths[0];
+  var endDepth = model.depths[model.depths.length - 1];
+
+  // Get the surface index of the position
+  var surfaceIndex = this.getSurfaceIndex(position, model);
+
   var profile = new Array();
-  var model = this.GetModel(model);
 
-  // Get the surface index
-  var surfaceIndex = this.GetSurfaceIndex(position, model);
-
-  // Go over all the depths
+  // Go over N sampled depths
   for(var i = 0; i < NUMBER_OF_DEPTHS; i++) {
 
-    // Depth we are interpolating in
-    var iDepth = START + (i / (NUMBER_OF_DEPTHS - 1)) * DEPTH;
+    // Depth we are interpolating at
+    var iDepth = startDepth + (i / (NUMBER_OF_DEPTHS - 1)) * (endDepth - startDepth);
 
     // Add each depth to the profile
     profile.push({
       "depth": iDepth,
-      "delta": this.Interpolate(surfaceIndex, iDepth, position, model)
+      "delta": this.interpolate(surfaceIndex, iDepth, position, model)
     });
 
   }
@@ -199,18 +254,57 @@ Hades.prototype.GetProfile = function(position, model, NUMBER_OF_DEPTHS) {
 
 }
 
-function linear(x1, x2, f) {
-  return x1 + f * (x2 - x1);
-}
+HadesServer.prototype.interpolate = function(surfaceIndex, depth, position, model) {
 
-Hades.prototype.Interpolate = function(surfaceIndex, depth, position, model) {
+  /*
+   * Function HadesServer::interpolate
+   * Interpolates value between eight grid points
+   */
+
+  function fraction(min, max, value) {
+  
+    /*
+     * Function HadesServer::interpolate::fraction
+     * Returns the fraction of a value between min and max
+     */
+
+    return (value - min) / (max - min);
+  
+  }
+
+  function bilinear(nodes, position) {
+  
+    /*
+     * Function HadesServer::interpolate::bilinear
+     * Does a bilinear interpolation
+     */
+
+    // Simplication by using unit square [0, 1] see:
+    // https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_square
+    var x = fraction(nodes[1].lng, nodes[0].lng, position.lng);
+    var y = fraction(nodes[2].lat, nodes[0].lat, position.lat);
+  
+    return (nodes[3].delta * (1 - x) * (1 - y)) + (nodes[1].delta * (1 - x) * y) + (nodes[2].delta * (1 - y) * x) + (nodes[0].delta * x * y);
+  
+  }
+
+  function linear(x1, x2, f) {
+
+    /*
+     * Function HadesServer::interpolate::linear
+     * Does a linear interpolation
+     */
+
+    return x1 + f * (x2 - x1);
+
+  }
 
   // Determine the depth belonging to a given depth
-  var depthIndex = this.GetDepthIndex(depth, model);
+  var depthIndex = this.getDepthIndex(depth, model);
 
   // Get the top and bottom nodes above this depth
-  var topNodes = this.GetNearestNodes(surfaceIndex, depthIndex - 1, model);
-  var bottomNodes = this.GetNearestNodes(surfaceIndex, depthIndex, model);
+  var topNodes = this.getNearestNodes(surfaceIndex, depthIndex - 1, model);
+  var bottomNodes = this.getNearestNodes(surfaceIndex, depthIndex, model);
 
   // Do a simple bilinear interpolation on a 2D plane
   // Note: the interpolation should not be done linearly but 
@@ -223,48 +317,46 @@ Hades.prototype.Interpolate = function(surfaceIndex, depth, position, model) {
 
 }
 
-Hades.prototype.GetNearestNodes = function(index, depth, model) {
+HadesServer.prototype.getNearestNodes = function(index, depth, model) {
+
+  /*
+   * Function HadesServer::getNearestNodes 
+   * Returns the four nearest nodes to a given point
+   */
 
   // Index of the previous node (CONSIDER WRAP AROUND!)
   var iMin = (index.i === 0 ? model.longitudes.length : index.i) - 1;
   var jMin = (index.j === 0 ? model.latitudes.length : index.j) - 1;
 
   return [
-    this.GetModelValue(index.i, index.j, depth, model),
-    this.GetModelValue(iMin, index.j, depth, model),
-    this.GetModelValue(index.i, jMin, depth, model),
-    this.GetModelValue(iMin, jMin, depth, model)
+    this.getModelValue(index.i, index.j, depth, model),
+    this.getModelValue(iMin, index.j, depth, model),
+    this.getModelValue(index.i, jMin, depth, model),
+    this.getModelValue(iMin, jMin, depth, model)
   ];
 
 }
 
-function fraction(min, max, value) {
+HadesServer.prototype.getDeltaIndex = function(i, j, k, model) {
 
-  return (value - min) / (max - min);
+  /*
+   * HadesServer.getDeltaIndex
+   * Returns delta (velocity) index from the requested model
+   */
 
-}
-
-function bilinear(nodes, position) {
-
-  // Simplication by using unit square [0, 1] see:
-  // https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_square
-  var x = fraction(nodes[1].lng, nodes[0].lng, position.lng);
-  var y = fraction(nodes[2].lat, nodes[0].lat, position.lat);
-
-  return (nodes[3].delta * (1 - x) * (1 - y)) + (nodes[1].delta * (1 - x) * y) + (nodes[2].delta * (1 - y) * x) + (nodes[0].delta * x * y);
-
-}
-
-/* Hades.prototype.GetDeltaIndex
- * Returns the index of delta value at a given node
- */
-Hades.prototype.GetDeltaIndex = function(i, j, k, model) {
   return i + (j * model.longitudes.length) + (k * model.longitudes.length * model.latitudes.length);
+
 }
 
-Hades.prototype.GetModelValue = function(i, j, k, model) {
+HadesServer.prototype.getModelValue = function(i, j, k, model) {
 
-  var deltaIndex = this.GetDeltaIndex(i, j, k, model);
+  /*
+   * HadesServer.getModelValue
+   * Returns an object from the model containing lat, lng, depth, and delta
+   */
+
+  // Get the index from the 1D array
+  var deltaIndex = this.getDeltaIndex(i, j, k, model);
 
   return {
     "lng": model.longitudes[i],
@@ -275,30 +367,38 @@ Hades.prototype.GetModelValue = function(i, j, k, model) {
 
 }
 
-Hades.prototype.GetModel = function(model) {
+HadesServer.prototype.getModel = function(model) {
 
-  return this.MODEL[model];
+  /*
+   * Function HadesServer::getModel
+   * Returns model with a particular name
+   */
+
+  return this.models[model];
 
 }
 
-Hades.prototype.GetDepthIndex = function(depth, model) {
+HadesServer.prototype.getDepthIndex = function(depth, model) {
 
-  return this.BinarySearchUpper(model.depths, depth) || (model.depths.length - 1);
+  /*
+   * Function HadesServer::getDepthIndex
+   * Returns the index of a given depth
+   */
+
+  return this.binarySearchUpper(model.depths, depth) || (model.depths.length - 1);
 
 }
 
-/*
- * FUNC Hades.GetSurfaceIndex
- *
- * Returns the indices of the surface nodes of
- * the cross section 
- *
- */
-Hades.prototype.GetSurfaceIndex = function(position, model) {
+HadesServer.prototype.getSurfaceIndex = function(position, model) {
 
-  // Get indices through binary search
-  var i = this.BinarySearchUpper(model.longitudes, position.lng);
-  var j = this.BinarySearchUpper(model.latitudes, position.lat);
+  /*
+   * Function HadesServer::getSurfaceIndex
+   * Returns the indices of the surface nodes of the cross section 
+   */
+
+  // Get model indices through binary search
+  var i = this.binarySearchUpper(model.longitudes, position.lng);
+  var j = this.binarySearchUpper(model.latitudes, position.lat);
 
   return {
     "i": (i % model.longitudes.length),
@@ -307,67 +407,20 @@ Hades.prototype.GetSurfaceIndex = function(position, model) {
 
 }
 
-const hades = new Hades(function() {
+Number.prototype.toDegrees = function() {
+  return (this * 180) / Math.PI;
+}
 
-  const webserver = Http.createServer(function(req, res) {
-  	
-    var url = Url.parse(req.url, true);
+Number.prototype.toRadians = function() {
+  return (this * Math.PI) / 180;
+}
 
-    const allowedModels = [
-      "UUP07",
-      "MITP08",
-      "SP12RTS-S",
-      "SP12RTS-P"
-    ];
+// Initialize a server
+new HadesServer(function() {
 
-    var resolution = url.query.resolution || "low";
+  // Show memory usage
+  var heapUsed = Math.round(process.memoryUsage().heapUsed / (Math.pow(1024, 2)));
 
-    if(["low", "high"].indexOf(resolution) === -1) {
-      res.writeHead(400);
-      return res.end();
-    }
-
-    if(url.query.phi1 === undefined || url.query.phi2 === undefined || url.query.lam1 === undefined || url.query.lam2 === undefined) {
-      res.writeHead(400);
-      return res.end();
-    }
-
-    if(allowedModels.indexOf(url.query.model) === -1) {
-      res.writeHead(400);
-      return res.end();
-    }
-
-    var start = Date.now()
-  
-    Logger.write(JSON.stringify({
-      "message": "HTTP Request",
-      "client": req.connection.remoteAddress,
-      "time": Date.now() - start,
-      "url": url.query,
-      "model": url.query.model,
-      "version": CONFIG.VERSION,
-      "timestamp": new Date().toISOString()
-    }) + "\n");
-    
-    var response = JSON.stringify(hades.GetCrossSection(
-      {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
-      {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
-      url.query.model,
-      resolution
-    ));
-
-  
-    // Set CORS headers
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
-
-    res.end(response);
-  
-  });
-
-  webserver.listen(CONFIG.PORT, CONFIG.HOST, function() {
-    var heapUsed = Math.round(process.memoryUsage().heapUsed / (Math.pow(1024, 2)));
-    console.log("Hades is listening. Memory usage: " + heapUsed + " MB.");
-  });
+  console.log("Hades is listening. Memory usage: " + heapUsed + " MB.");
 
 });
