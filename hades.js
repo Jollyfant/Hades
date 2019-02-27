@@ -41,6 +41,19 @@ const HadesServer = function(callback) {
 
 }
 
+HadesServer.prototype.HTTPError = function(response, error) {
+
+  /*
+   * Function HadesServer::HTTPError
+   * Returns HTTP error with error message
+   */
+
+  response.statusCode = 400;
+  response.setHeader("Content-Type", "text/plain");
+  response.end(error);
+
+}
+
 HadesServer.prototype.requestHandler = function(request, response) {
 
   /*
@@ -54,21 +67,18 @@ HadesServer.prototype.requestHandler = function(request, response) {
   const resolution = url.query.resolution || "low";
 
   // Requested resolution is not supported
-  if(resolution !== "low" && resolution !== "high") {
-    response.writeHead(400);
-    return response.end();
+  if(resolution !== "low" && resolution !== "high" && resolution !== "ultra") {
+    return this.HTTPError(response, "The requested resolution is not supported.");
   }
 
   // Location of the markers are missing
   if(url.query.phi1 === undefined || url.query.phi2 === undefined || url.query.lam1 === undefined || url.query.lam2 === undefined) {
-    response.writeHead(400);
-    return response.end();
+    return this.HTTPError(response, "Could not determine the requested cross section endpoints.");
   }
 
   // The requested model is not available
   if(!this.models.hasOwnProperty(url.query.model)) {
-    response.writeHead(400);
-    return response.end();
+    return this.HTTPError(response, "The requested model is not supported.");
   }
 
   const start = Date.now()
@@ -94,6 +104,9 @@ HadesServer.prototype.requestHandler = function(request, response) {
   // Allow CORS headers
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Headers", "X-Requested-With");
+
+  // Set proper content-type
+  response.setHeader("Content-Type", "application/json");
 
   response.end(payload);
  
