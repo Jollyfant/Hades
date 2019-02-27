@@ -1,3 +1,15 @@
+/*
+ * file: hades.js
+ *
+ * Server-side code for Heteregenous Anomalies in Deep Earth Structures
+ * Tomography profile server
+ *
+ * Author: Mathijs Koymnas, 2019
+ * Licensed under MIT.
+ * All Rights Reserved.
+ *
+ */
+
 const fs = require("fs");
 const { join } = require("path");
 const { createServer } = require("http");
@@ -5,7 +17,6 @@ const { parse } = require("url");
 
 // Load the configuration
 const CONFIG = require("./config");
-const MAXIMUM_DEPTH = 2815.50;
 
 const HadesServer = function(callback) {
  
@@ -24,6 +35,8 @@ const HadesServer = function(callback) {
 
   // Create the webserver handler
   this.webserver = createServer(this.requestHandler.bind(this));
+
+  // Listen for incoming connections
   this.webserver.listen(CONFIG.PORT, CONFIG.HOST, callback);
 
 }
@@ -148,25 +161,34 @@ HadesServer.prototype.getCrossSection = function(first, second, model, resolutio
   // Determine number of points based on the resolution
   switch(resolution) {
     case "low":
-      NUMBER_OF_DEPTHS = 60;
+      NUMBER_OF_DEPTHS = 40;
       NUMBER_OF_POINTS = Math.ceil(arcDistance.toDegrees());
       break;
     case "high":
-      NUMBER_OF_DEPTHS = 120;
+      NUMBER_OF_DEPTHS = 80;
       NUMBER_OF_POINTS = Math.ceil(2 * arcDistance.toDegrees());
+      break;
+    case "ultra":
+      NUMBER_OF_DEPTHS = 160;
+      NUMBER_OF_POINTS = Math.ceil(4 * arcDistance.toDegrees());
       break;
   }
 
+  var model = this.getModel(model);
+
   var crossSection = new Array();
 
+  // Sample all points
   for(var i = 0; i < NUMBER_OF_POINTS; i++) {
     crossSection.push(this.getProfile(this.fractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model, NUMBER_OF_DEPTHS));
   }
 
+  var maximumDepth = model.depths[model.depths.length - 1] - model.depths[0];
+
   return {
     "distance": arcDistance,
     "crossSection": crossSection,
-    "rowSize": MAXIMUM_DEPTH / (NUMBER_OF_DEPTHS - 1),
+    "rowSize": maximumDepth / (NUMBER_OF_DEPTHS - 1),
     "colSize": arcDistance / (NUMBER_OF_POINTS - 1)
   }
 
@@ -220,9 +242,6 @@ HadesServer.prototype.getProfile = function(position, model, NUMBER_OF_DEPTHS) {
    * Function Hades::getProfile
    * Returns the tomographical depth profile for a position on the surface
    */
-
-  // Set up an empty profile
-  var model = this.getModel(model);
 
   // Determine the start and end depth of the model
   var startDepth = model.depths[0];

@@ -220,12 +220,12 @@ HadesArced.prototype.DrawData = function(data) {
       var n = CORE_RADIUS - column.data[j].depth + MANTLE_RADIUS;
       var pos = new Position(n, f);   
 
-      var arcPointFactory = this.createArc(pos.r - 0.5 * fraction(data.rowSize), (pos.r + 0.5 * fraction(data.rowSize)).Clamp(0, SCALED_RADIUS));
+      var arcPointFactory = this.createArc(pos.r - 0.55 * fraction(data.rowSize), (pos.r + 0.55 * fraction(data.rowSize)).Clamp(0, SCALED_RADIUS));
 
       // Make sure to offset
       var pointArc = arcPointFactory({
-        "startAngle": pos.phi - (0.5 * data.colSize),
-        "endAngle": Math.min(pos.phi + 0.5 * data.colSize, 0.5 * this.angle) 
+        "startAngle": pos.phi - (0.55 * data.colSize),
+        "endAngle": Math.min(pos.phi + 0.55 * data.colSize, 0.55 * this.angle) 
       })
 
       this.DrawDataPoint(pointArc, column.data[j].delta);
@@ -297,7 +297,6 @@ HadesArced.prototype.DrawDataPoint = function(arc, delta) {
 
   this.svg.append("path")
     .attr("fill", this.getVelocityColor(delta))
-    .attr("class", "Wow")
     .attr("d", arc);
 
 }
