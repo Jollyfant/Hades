@@ -217,7 +217,7 @@ HadesArced.prototype.DrawData = function(data) {
         
     for(var j = 0; j < column.data.length; j++) {
                       
-      var n = CORE_RADIUS - column.data[j].depth + MANTLE_RADIUS;
+      var n = CORE_RADIUS - data.depths[j] + MANTLE_RADIUS;
       var pos = new Position(n, f);   
 
       var arcPointFactory = this.createArc(pos.r - 0.55 * fraction(data.rowSize), (pos.r + 0.55 * fraction(data.rowSize)).Clamp(0, SCALED_RADIUS));
@@ -228,7 +228,7 @@ HadesArced.prototype.DrawData = function(data) {
         "endAngle": Math.min(pos.phi + 0.55 * data.colSize, 0.55 * this.angle) 
       })
 
-      this.DrawDataPoint(pointArc, column.data[j].delta);
+      this.DrawDataPoint(pointArc, column.data[j]);
 
     }
 

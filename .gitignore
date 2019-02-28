@@ -2,3 +2,4 @@ db
 config.json
 log
 .DS_STORE
+*.sw?

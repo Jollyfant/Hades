@@ -64,11 +64,16 @@ HadesServer.prototype.requestHandler = function(request, response) {
   const url = parse(request.url, true);
 
   // Default resolution is low
-  const resolution = url.query.resolution || "low";
+  const resolution = url.query.resolution;
+  const depth = url.query.depth;
 
   // Requested resolution is not supported
   if(resolution !== "low" && resolution !== "high" && resolution !== "ultra") {
     return this.HTTPError(response, "The requested resolution is not supported.");
+  }
+
+  if(depth !== "full" && depth !== "mantle") {
+    return this.HTTPError(response, "The requested depth is not supported.");
   }
 
   // Location of the markers are missing
@@ -93,13 +98,18 @@ HadesServer.prototype.requestHandler = function(request, response) {
     "timestamp": new Date().toISOString()
   }) + "\n");
 
+  // Create the cross section payload
   var payload = JSON.stringify(this.getCrossSection(
     {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
     {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
     url.query.model,
-    resolution
+    resolution,
+    depth
   ));
 
+
+  // HTTP OK
+  response.statusCode = 200;
 
   // Allow CORS headers
   response.setHeader("Access-Control-Allow-Origin", "*");
@@ -119,15 +129,26 @@ HadesServer.prototype.readModel = function(filename) {
    * Reads a particular model from disk and saves to available model object
    */
 
+  function readModeFile(filename) {
+
+    /*
+     * Function HadesServer::readModel::readModelFile
+     * Reads and parses a single tomographic JSON model file
+     */
+
+    return JSON.parse(fs.readFileSync(join(CONFIG.DATABASE_DIRECTORY, filename)).toString());
+
+  }
+
   // Skip anything that does not end with the .db extension
   if(!filename.endsWith(".db")) {
     return;
   }
 
-  console.log("Reading tomographic model: " + filename);
+  console.log("Reading tomographic model " + filename + " to memory.");
 
-  // Save particular model
-  this.models[filename.slice(0, -3)] = JSON.parse(fs.readFileSync(join(CONFIG.DATABASE_DIRECTORY, filename)).toString());
+  // Save particular model without the '.db' extension
+  this.models[filename.slice(0, -3)] = readModeFile(filename);
 
 }
 
@@ -144,6 +165,7 @@ HadesServer.prototype.binarySearchUpper = function(haystack, needle) {
 
   while(minIndex <= maxIndex) {
 
+    // Truncate to integer
     currentIndex = 0.5 * (minIndex + maxIndex) | 0;
     value = haystack[currentIndex];
 
@@ -159,7 +181,7 @@ HadesServer.prototype.binarySearchUpper = function(haystack, needle) {
 
 }
 
-HadesServer.prototype.getCrossSection = function(first, second, model, resolution) {
+HadesServer.prototype.getCrossSection = function(first, second, model, resolution, depth) {
 
   /* 
    * Function Hades::getCrossSection
@@ -187,20 +209,37 @@ HadesServer.prototype.getCrossSection = function(first, second, model, resolutio
       break;
   }
 
+  // Get the model
   var model = this.getModel(model);
 
-  var crossSection = new Array();
+  // Determine the start and end depth of the model
+  var startDepth = model.depths[0];
 
-  // Sample all points
-  for(var i = 0; i < NUMBER_OF_POINTS; i++) {
-    crossSection.push(this.getProfile(this.fractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), model, NUMBER_OF_DEPTHS));
+  // Determine the end depth based on a query parameter
+  if(depth === "full") {
+    var endDepth = model.depths[model.depths.length - 1];
+  } else if(depth === "mantle") {
+    var endDepth = 660;
   }
 
-  var maximumDepth = model.depths[model.depths.length - 1] - model.depths[0];
+  // Go over N sampled depths
+  var depths = new Array();
+  for(var i = 0; i < NUMBER_OF_DEPTHS; i++) {
+    depths.push(startDepth + (i / (NUMBER_OF_DEPTHS - 1)) * (endDepth - startDepth));
+  }
+
+  // Sample points along a profile
+  var crossSection = new Array();
+  for(var i = 0; i < NUMBER_OF_POINTS; i++) {
+    crossSection.push(this.getProfile(model, this.fractionalHaversine(first, second, i / (NUMBER_OF_POINTS - 1)), depths));
+  }
+
+  var maximumDepth = depths[depths.length - 1] - depths[0];
 
   return {
     "distance": arcDistance,
     "crossSection": crossSection,
+    "depths": depths,
     "rowSize": maximumDepth / (NUMBER_OF_DEPTHS - 1),
     "colSize": arcDistance / (NUMBER_OF_POINTS - 1)
   }
@@ -249,35 +288,22 @@ HadesServer.prototype.fractionalHaversine = function(first, second, fraction) {
 
 }
 
-HadesServer.prototype.getProfile = function(position, model, NUMBER_OF_DEPTHS) {
+HadesServer.prototype.getProfile = function(model, position, depths) {
 
   /*
    * Function Hades::getProfile
    * Returns the tomographical depth profile for a position on the surface
    */
 
-  // Determine the start and end depth of the model
-  var startDepth = model.depths[0];
-  var endDepth = model.depths[model.depths.length - 1];
+  const PRECISION = 2;
 
   // Get the surface index of the position
   var surfaceIndex = this.getSurfaceIndex(position, model);
 
-  var profile = new Array();
-
-  // Go over N sampled depths
-  for(var i = 0; i < NUMBER_OF_DEPTHS; i++) {
-
-    // Depth we are interpolating at
-    var iDepth = startDepth + (i / (NUMBER_OF_DEPTHS - 1)) * (endDepth - startDepth);
-
-    // Add each depth to the profile
-    profile.push({
-      "depth": iDepth,
-      "delta": this.interpolate(surfaceIndex, iDepth, position, model)
-    });
-
-  }
+  // Calculate the profile
+  var profile = depths.map(function(depth) {
+    return parseFloat(this.interpolate(surfaceIndex, depth, position, model).toPrecision(PRECISION));
+  }, this);
 
   return {
     "position": position,

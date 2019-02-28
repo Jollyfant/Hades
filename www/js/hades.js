@@ -305,15 +305,21 @@ function getCrossSection() {
     "phi2=" + secondMarker.position.toJSON().lat,
     "lam2=" + secondMarker.position.toJSON().lng,
     "model=" + document.getElementById("model-type").value,
+    "depth=" + "full",
     "resolution=" + (document.getElementById("high-resolution").checked ? "high" : "low")
   ].join("&");
 
-  document.getElementById("location-information").innerHTML = formatLocationString(firstMarker.position.toJSON(), secondMarker.position.toJSON());
+  // Update location information
+  document.getElementById("location-information").innerHTML = formatLocationString(
+    firstMarker.position.toJSON(),
+    secondMarker.position.toJSON()
+  );
+
   document.getElementById("progress-bar-text").innerHTML = getProgressBarMessage(); 
   document.getElementById("progress-bar").style.visibility = "visible";
 
   $.ajax({
-    "url": "http://" + HADES_SERVER + "/" + queryString,
+    "url": "http://" + HADES_SERVER + queryString,
     "dataType": "json",
     "type": "GET",
     "success": drawCrossSection, 
@@ -349,11 +355,12 @@ function drawCrossSection(json) {
   // Prepare heatmap data array
   for(var i = 0; i < json.crossSection.length; i++) {
     distance = json.distance * (i / (json.crossSection.length - 1)) * EARTH_RADIUS;
-    json.crossSection[i].data.forEach(function(x) {
+    depth = json.depths;
+    json.crossSection[i].data.forEach(function(x, j) {
       heatmapData.push([
         distance,
-        x.depth,
-        x.delta
+        depth[j],
+        x
       ]);
     })
   }
