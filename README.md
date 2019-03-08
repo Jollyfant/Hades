@@ -6,6 +6,14 @@
 
 Source code for the HADES Alpha 0.2.0 tomographic explorer based on various tomographic models. The HADES server and client (www) are provided. The database files that contain the tomographic models are **not** included in this repository. A demo of this application can be found on the [Atlas of the Underworld](http://www.atlas-of-the-underworld.org/hades-underworld-explorer/).
 
+# Citation
+
+The HADES souce code and application can be cited through the following doi:
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2587524.svg)](https://doi.org/10.5281/zenodo.2587524)
+
+
+
 # Models
 
 * UUP07
