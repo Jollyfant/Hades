@@ -3,7 +3,7 @@ var map,
     polyLine;
 
 // Configuration
-const APPLICATION_VERSION = "Alpha 0.4.1";
+const APPLICATION_VERSION = "Alpha 0.4.2";
 const HADES_SERVER = "136.144.177.195:8080";
 
 const EARTH_RADIUS = 6371.0;

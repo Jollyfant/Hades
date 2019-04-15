@@ -98,14 +98,18 @@ HadesServer.prototype.requestHandler = function(request, response) {
     "timestamp": new Date().toISOString()
   }) + "\n");
 
-  // Create the cross section payload
-  var payload = JSON.stringify(this.getCrossSection(
-    {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
-    {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
-    url.query.model,
-    resolution,
-    depth
-  ));
+  try {
+    // Create the cross section payload
+    var payload = JSON.stringify(this.getCrossSection(
+      {"lat": Number(url.query.phi1), "lng": Number(url.query.lam1)},
+      {"lat": Number(url.query.phi2), "lng": Number(url.query.lam2)},
+      url.query.model,
+      resolution,
+      depth
+    ));
+  } catch(exception) {
+    return this.HTTPError(response, exception);
+  }
 
 
   // HTTP OK
@@ -226,6 +230,10 @@ HadesServer.prototype.getCrossSection = function(first, second, model, resolutio
   var depths = new Array();
   for(var i = 0; i < NUMBER_OF_DEPTHS; i++) {
     depths.push(startDepth + (i / (NUMBER_OF_DEPTHS - 1)) * (endDepth - startDepth));
+  }
+
+  if(NUMBER_OF_POINTS < 2) {
+    throw("Could not create cross section.");
   }
 
   // Sample points along a profile

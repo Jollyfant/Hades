@@ -1,7 +1,7 @@
 {
   "LOGFILE": "./log/hades.log",
   "DATABASE_DIRECTORY": "./db",
-  "VERSION": "0.3.0",
+  "VERSION": "0.4.2",
   "HOST": "localhost",
   "PORT": 8080
 }
